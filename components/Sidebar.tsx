@@ -4,13 +4,23 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
-  { label: "My Account", href: "/main-menu" },
+  { label: "My Account", href: "/Login" },
   { label: "Profile", href: "/profile" },
   { label: "Transaction", href: "/transaction" },
 ];
 
+import { useRouter } from "next/navigation";
 export default function Sidebar() {
   const pathname = usePathname();
+
+  const router = useRouter();
+
+  // ... rest of component
+
+  const handleSignOut = () => {
+    // clear session/cookies/localStorage here first, if needed
+    router.push("/Login");
+  };
 
   return (
     <aside className="flex w-72 shrink-0 flex-col justify-between bg-green-200 px-6 py-10">
@@ -42,6 +52,7 @@ export default function Sidebar() {
       <button
         type="button"
         className="text-left text-lg font-medium text-red-600 hover:text-red-700"
+        onClick={handleSignOut}
       >
         Sign Out
       </button>
