@@ -15,6 +15,20 @@ export default function MainMenu() {
     amount: number
   ) => setter((prev) => String((Number(prev) || 0) + amount));
 
+  const handleDeposit = () => {
+    const value = Number(depositAmount);
+    if (!value) return;
+    setBalance((prev) => prev + value);
+    setDepositAmount("");
+  };
+
+  const handleWithdraw = () => {
+    const value = Number(withdrawAmount);
+    if (!value) return;
+    setBalance((prev) => prev - Math.abs(value));
+    setWithdrawAmount("");
+  };
+
   return (
     <div className="flex min-h-screen bg-white">
       <Sidebar />
@@ -37,13 +51,25 @@ export default function MainMenu() {
             ))}
           </div>
 
-          <input
-            type="text"
-            value={depositAmount}
-            onChange={(e) => setDepositAmount(e.target.value)}
-            placeholder="Enter Amount Deposit"
-            className="mt-4 w-full rounded-lg bg-green-50 px-5 py-4 font-semibold text-gray-900 placeholder:font-semibold placeholder:text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-400"
-          />
+          <div className="mt-4 flex items-center rounded-lg bg-green-50 pr-2">
+            <input
+              type="text"
+              value={depositAmount}
+              onChange={(e) => setDepositAmount(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleDeposit()}
+              placeholder="Enter Amount Deposit"
+              className="w-full bg-transparent px-5 py-4 font-semibold text-gray-900 placeholder:font-semibold placeholder:text-gray-900 focus:outline-none"
+            />
+            {depositAmount && (
+              <button
+                type="button"
+                onClick={handleDeposit}
+                className="shrink-0 rounded-md bg-green-200 px-4 py-2 text-sm font-semibold text-gray-900 hover:bg-green-300"
+              >
+                Enter
+              </button>
+            )}
+          </div>
 
           <hr className="my-8 border-gray-300" />
 
@@ -60,13 +86,25 @@ export default function MainMenu() {
             ))}
           </div>
 
-          <input
-            type="text"
-            value={withdrawAmount}
-            onChange={(e) => setWithdrawAmount(e.target.value)}
-            placeholder="Enter Amount Withdraw"
-            className="mt-4 w-full rounded-lg bg-green-50 px-5 py-4 font-semibold text-gray-900 underline placeholder:font-semibold placeholder:text-gray-900 placeholder:underline focus:outline-none focus:ring-2 focus:ring-green-400"
-          />
+          <div className="mt-4 flex items-center rounded-lg bg-green-50 pr-2">
+            <input
+              type="text"
+              value={withdrawAmount}
+              onChange={(e) => setWithdrawAmount(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleWithdraw()}
+              placeholder="Enter Amount Withdraw"
+              className="w-full bg-transparent px-5 py-4 font-semibold text-gray-900 underline placeholder:font-semibold placeholder:text-gray-900 placeholder:underline focus:outline-none"
+            />
+            {withdrawAmount && (
+              <button
+                type="button"
+                onClick={handleWithdraw}
+                className="shrink-0 rounded-md bg-green-200 px-4 py-2 text-sm font-semibold text-gray-900 hover:bg-green-300"
+              >
+                Enter
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="pointer-events-none absolute right-16 top-1/2 flex h-80 w-80 -translate-y-1/2 items-center justify-center rounded-full border-2 border-green-600 bg-green-200">

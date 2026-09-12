@@ -13,7 +13,7 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-full w-72 shrink-0 flex-col justify-between bg-green-200 px-6 py-10">
+    <aside className="flex w-72 shrink-0 flex-col justify-between bg-green-200 px-6 py-10">
       <div>
         <div className="mx-auto mb-10 flex h-32 w-32 items-center justify-center rounded-full bg-green-700 text-white">
           <span className="text-sm font-medium">Logo</span>
