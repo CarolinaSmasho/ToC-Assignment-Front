@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 const NAV_ITEMS = [
   { label: "My Account", href: "/MainMenu" },
   { label: "Profile", href: "/Profile" },
-  { label: "Transaction", href: "/transaction" },
+  { label: "Transaction", href: "/Transaction" },
 ];
 
 import { useRouter } from "next/navigation";
