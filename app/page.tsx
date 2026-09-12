@@ -93,7 +93,7 @@ export default function MainMenu() {
               onChange={(e) => setWithdrawAmount(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleWithdraw()}
               placeholder="Enter Amount Withdraw"
-              className="w-full bg-transparent px-5 py-4 font-semibold text-gray-900 underline placeholder:font-semibold placeholder:text-gray-900 placeholder:underline focus:outline-none"
+              className="w-full bg-transparent px-5 py-4 font-semibold text-gray-900 placeholder:font-semibold placeholder:text-gray-900 focus:outline-none"
             />
             {withdrawAmount && (
               <button
