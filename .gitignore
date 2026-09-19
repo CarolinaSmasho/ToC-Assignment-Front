@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
@@ -40,7 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-=======
 ### NextJS ###
 # Next build dir
 .next/
@@ -133,4 +131,4 @@ bower_components
 psd
 thumb
 sketch
->>>>>>> main
+
