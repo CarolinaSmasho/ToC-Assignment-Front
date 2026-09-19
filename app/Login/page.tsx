@@ -70,7 +70,7 @@ export default function LoginPage() {
 			Welcome
 			</h1>
 			<p className="mt-2 text-base sm:text-lg text-gray-500 font-normal">
-			Log-In with Email
+			Log-In with Username
 			</p>
 		</div>
 
@@ -85,7 +85,7 @@ export default function LoginPage() {
 				type="text"
 				value={username}
 				onChange={(e) => setUsername(e.target.value)}
-				placeholder="Username / Email"
+				placeholder="Username"
 				className="w-full bg-transparent py-1.5 text-base text-gray-800 placeholder:text-gray-400 focus:outline-none focus:placeholder-transparent"
 			/>
 			</div>

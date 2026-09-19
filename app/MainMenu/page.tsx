@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 
 const AMOUNTS = [1, 2, 5, 10, 50, 100, 500, 1000];
+const API = "http://localhost:8080"
 
 export default function MainMenu() {
   const [balance, setBalance] = useState(500);
