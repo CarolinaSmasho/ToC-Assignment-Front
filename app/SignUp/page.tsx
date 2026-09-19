@@ -16,11 +16,11 @@ interface FormData {
 
 const DEFAULT_FORM_DATA: FormData = {
   username: "SSRDZz",
-  email: "TOC@gmail.com",
   password: "Password123!",
-  dateOfBirth: "15/08/2002",
-  phone: "022 222 2222",
-  address: "99/1 Rama 9 Rd, Bangkok",
+  email: "TOC@gmail.com",
+  phone: "022-222-2222",
+  dateOfBirth: "15/08/2524",
+  address: "293 ซอยลาดกระบัง 64 ถนนลาดกระบัง",
   creditCard: "4111 2222 3333 4444",
 };
 
