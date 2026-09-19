@@ -1,43 +1,117 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 
 const AMOUNTS = [1, 2, 5, 10, 50, 100, 500, 1000];
-const API = "http://localhost:8080"
+const API = "http://localhost:8080";
+
+const getErrorMessage = (data: any, fallback: string): string => {
+  if (typeof data?.detail === "string") return data.detail;
+  if (Array.isArray(data?.detail)) return data.detail.map((e: any) => e.msg).join(", ");
+  return fallback;
+};
 
 export default function MainMenu() {
-  const [balance, setBalance] = useState(500);
+  const router = useRouter();
+  const [userId, setUserId] = useState<string | null>(null);
+  const [username, setUsername] = useState("");
+  const [balance, setBalance] = useState(0);
   const [depositAmount, setDepositAmount] = useState("");
   const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  const fetchBalance = async (id: string) => {
+    const res = await fetch(`${API}/transactions/${id}/balance`);
+    const data = await res.json();
+    if (res.ok) {
+      setUsername(data.username);
+      setBalance(data.money);
+    }
+  };
+
+  useEffect(() => {
+    const id = localStorage.getItem("user_id");
+    if (!id) {
+      router.push("/Login");
+      return;
+    }
+    setUserId(id);
+    fetchBalance(id).finally(() => setLoading(false));
+  }, [router]);
 
   const bump = (
     setter: React.Dispatch<React.SetStateAction<string>>,
     amount: number
   ) => setter((prev) => String((Number(prev) || 0) + amount));
 
-  const handleDeposit = () => {
+  const handleDeposit = async () => {
+    setError("");
     const value = Number(depositAmount);
-    if (!value) return;
-    setBalance((prev) => prev + value);
-    setDepositAmount("");
+    if (!value || value <= 0 || !userId) return;
+
+    try {
+      const res = await fetch(`${API}/transactions/${userId}/deposit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: value }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(getErrorMessage(data, "Deposit failed"));
+        return;
+      }
+      setDepositAmount("");
+      await fetchBalance(userId);
+    } catch {
+      setError("Could not reach server");
+    }
   };
 
-  const handleWithdraw = () => {
+  const handleWithdraw = async () => {
+    setError("");
     const value = Number(withdrawAmount);
-    if (!value) return;
-    setBalance((prev) => prev - Math.abs(value));
-    setWithdrawAmount("");
+    if (!value || value <= 0 || !userId) return;
+
+    try {
+      const res = await fetch(`${API}/transactions/${userId}/withdraw`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: value }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(getErrorMessage(data, "Withdraw failed"));
+        return;
+      }
+      setWithdrawAmount("");
+      await fetchBalance(userId);
+    } catch {
+      setError("Could not reach server");
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen bg-white">
+        <Sidebar />
+        <main className="flex flex-1 items-center justify-center">
+          <p className="text-gray-500">Loading...</p>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-white">
       <Sidebar />
 
       <main className="relative flex flex-1 flex-col px-16 py-12">
-        <h1 className="text-3xl text-gray-900">Username</h1>
-        <p className="mt-2 text-sm text-gray-500">XXXX-XXXX-XXXX-1234</p>
+        <h1 className="text-3xl text-gray-900">{username}</h1>
+
+        {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
 
         <div className="mt-10 max-w-xl">
           <div className="grid grid-cols-4 gap-4">
