@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AuthBrandPanel from "@/components/AuthBrandPanel";
+import { API_URL } from "@/lib/api";
 
 interface FormData {
 username: string;
@@ -110,7 +111,7 @@ const [loading, setLoading] = useState(false);
 		setError("");
 		setLoading(true);
 		try {
-			const res = await fetch("http://localhost:8080/auth/register", {
+			const res = await fetch(`${API_URL}/auth/register`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({

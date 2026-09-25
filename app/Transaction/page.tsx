@@ -4,8 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import TransactionItem from "@/components/TransactionItem";
-
-const API = "http://localhost:8080";
+import { API_URL as API } from "@/lib/api";
 
 type ApiTransaction = {
 	credit_card: string;

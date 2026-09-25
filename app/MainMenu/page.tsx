@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
+import { API_URL as API } from "@/lib/api";
 
 const AMOUNTS = [1, 2, 5, 10, 50, 100, 500, 1000];
-const API = "http://localhost:8080";
 
 const getErrorMessage = (data: any, fallback: string): string => {
   if (typeof data?.detail === "string") return data.detail;

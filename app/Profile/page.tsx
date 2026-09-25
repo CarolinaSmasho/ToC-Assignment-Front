@@ -3,8 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
-
-const API = "http://localhost:8080";
+import { API_URL as API } from "@/lib/api";
 
 type Profile = {
 	username: string;

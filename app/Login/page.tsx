@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AuthBrandPanel from "@/components/AuthBrandPanel";
+import { API_URL } from "@/lib/api";
 
 export default function LoginPage() {
 
@@ -33,7 +34,7 @@ export default function LoginPage() {
 	
 		setLoading(true);
 		try {
-			const res = await fetch("http://localhost:8080/auth/login", {
+			const res = await fetch(`${API_URL}/auth/login`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ username, password }),
