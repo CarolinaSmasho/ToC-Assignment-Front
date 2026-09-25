@@ -18,12 +18,10 @@ export default function LoginPage() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
-
     if (!username.trim() || !password) {
       setError("Enter your username and password to continue.");
       return;
     }
-
     setLoading(true);
     try {
       const response = await fetch(`${API_URL}/auth/login`, {
@@ -32,18 +30,15 @@ export default function LoginPage() {
         body: JSON.stringify({ username: username.trim(), password }),
       });
       const data: unknown = await response.json();
-
       if (!response.ok || !data || typeof data !== "object") {
         setError(getErrorMessage(data, "We could not sign you in. Try again."));
         return;
       }
-
       const result = data as { user_id?: number; username?: string };
       if (typeof result.user_id !== "number" || typeof result.username !== "string") {
         setError("The sign-in response was incomplete. Try again.");
         return;
       }
-
       localStorage.setItem("user_id", String(result.user_id));
       localStorage.setItem("username", result.username);
       router.push("/MainMenu");
@@ -55,89 +50,112 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#f7faf8] lg:flex-row">
+    <div className="flex min-h-screen">
       <AuthBrandPanel />
-      <main className="soft-grid relative flex min-w-0 flex-1 items-center justify-center px-5 py-8 sm:px-8 lg:px-12">
-        <div className="absolute left-0 top-0 hidden h-36 w-36 rounded-br-full bg-[#dff3e9]/65 lg:block" aria-hidden="true" />
-        <section className="enter-up relative w-full max-w-[28rem]">
+
+      <main className="soft-grid relative flex min-w-0 flex-1 flex-col items-center justify-center px-6 py-10 sm:px-10 lg:px-14">
+        {/* floating accent */}
+        <div className="pointer-events-none absolute right-0 top-0 h-72 w-72 rounded-full bg-[#dff3e9]/40 blur-3xl" aria-hidden />
+
+        <section className="enter-up relative w-full max-w-[26rem]">
+          {/* Mobile brand */}
           <div className="mb-10 flex items-center justify-between lg:hidden">
-            <Link href="/Login" className="flex items-center gap-3">
+            <Link href="/Login" className="flex items-center gap-2.5">
               <BrandMark size="sm" />
-              <span className="font-semibold tracking-[-0.025em] text-[#102522]">MaskVault</span>
+              <span className="text-sm font-bold tracking-tight text-[#0d1f1c]">MaskVault</span>
             </Link>
-            <span className="rounded-full bg-[#dff3e9] px-3 py-1.5 text-xs font-semibold text-[#083a31]">Production</span>
+            <span className="badge badge-green">Production</span>
           </div>
 
-          <p className="eyebrow">Authorized access</p>
-          <h1 className="mt-3 text-4xl font-semibold tracking-[-0.055em] text-[#102522] sm:text-5xl">Sign in securely.</h1>
-          <p className="mt-4 max-w-md text-base leading-7 text-[#667a75]">
-            Use your account to access privacy-protected banking data.
+          {/* Heading */}
+          <p className="eyebrow">Secure access</p>
+          <h1 className="mt-3 text-[2.6rem] font-bold tracking-[-0.06em] text-[#0d1f1c] leading-[1.1]">
+            Welcome<br />back.
+          </h1>
+          <p className="mt-4 text-[0.9375rem] leading-7 text-[#52716a]">
+            Sign in to access privacy-protected banking data with regex masking.
           </p>
-          <p className="mt-1 text-sm leading-6 text-[#667a75]">เข้าสู่ระบบเพื่อเข้าถึงข้อมูลที่ได้รับการปกป้อง</p>
 
-          <form className="mt-9 space-y-5" onSubmit={handleSubmit} noValidate>
-            <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-[#102522]">Username</span>
+          <form className="mt-9 space-y-4" onSubmit={handleSubmit} noValidate>
+            {/* Username */}
+            <div>
+              <label htmlFor="login-username" className="mb-2 block text-sm font-semibold text-[#0d1f1c]">
+                Username
+              </label>
               <div className="field-shell">
                 <input
                   id="login-username"
                   type="text"
                   autoComplete="username"
                   value={username}
-                  onChange={(event) => setUsername(event.target.value)}
-                  placeholder="Your username"
-                  className="h-13 w-full rounded-[0.85rem] bg-transparent px-4 text-base text-[#102522] outline-none placeholder:text-[#8a9b96]"
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="your_username"
+                  className="h-[3.25rem] w-full rounded-[0.9rem] bg-transparent px-4 text-[0.9375rem] text-[#0d1f1c] outline-none placeholder:text-[#a0b5af]"
                 />
               </div>
-            </label>
+            </div>
 
-            <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-[#102522]">Password</span>
-              <div className="field-shell flex items-center pr-2">
+            {/* Password */}
+            <div>
+              <label htmlFor="login-password" className="mb-2 block text-sm font-semibold text-[#0d1f1c]">
+                Password
+              </label>
+              <div className="field-shell flex items-center pr-1.5">
                 <input
                   id="login-password"
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
                   value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  placeholder="Enter your password"
-                  className="h-13 min-w-0 flex-1 rounded-[0.85rem] bg-transparent px-4 text-base text-[#102522] outline-none placeholder:text-[#8a9b96]"
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="h-[3.25rem] min-w-0 flex-1 bg-transparent pl-4 text-[0.9375rem] text-[#0d1f1c] outline-none placeholder:text-[#a0b5af]"
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword((value) => !value)}
-                  className="rounded-lg px-3 py-2 text-sm font-semibold text-[#147a60] transition hover:bg-[#f1f7f4] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#147a60]"
+                  onClick={() => setShowPassword((v) => !v)}
                   aria-label={showPassword ? "Hide password" : "Show password"}
+                  className="rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-wide text-[#147a60] transition hover:bg-[#f0f8f4]"
                 >
                   {showPassword ? "Hide" : "Show"}
                 </button>
               </div>
-            </label>
+            </div>
 
+            {/* Error */}
             {error && (
-              <p role="alert" className="rounded-xl border border-[#f1c7c7] bg-[#fff7f7] px-4 py-3 text-sm leading-6 text-[#b93838]">
-                {error}
-              </p>
+              <div role="alert" className="flex items-start gap-3 rounded-xl border border-[#fecaca] bg-[#fef2f2] px-4 py-3">
+                <svg className="mt-0.5 h-4 w-4 shrink-0 text-[#c0392b]" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+                  <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1Zm-.75 3.75a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0v-3.5Zm.75 7a.875.875 0 1 1 0-1.75.875.875 0 0 1 0 1.75Z" />
+                </svg>
+                <p className="text-sm leading-6 text-[#c0392b]">{error}</p>
+              </div>
             )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="mt-2 flex h-13 w-full items-center justify-center rounded-2xl bg-[#083a31] px-5 text-base font-semibold text-white transition hover:bg-[#0d5546] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#147a60] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {loading ? "Signing in…" : "Sign in"}
+            <button type="submit" disabled={loading} className="btn-primary w-full mt-2">
+              {loading ? (
+                <>
+                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Signing in…
+                </>
+              ) : "Sign in securely"}
             </button>
           </form>
 
-          <div className="mt-7 border-t border-[#dbe7e1] pt-6 text-sm leading-6 text-[#667a75]">
+          <div className="mt-8 border-t border-[#e0ebe5] pt-6 text-sm text-[#52716a]">
             <p>
-              Need an account?{" "}
+              No account?{" "}
               <Link href="/SignUp" className="font-semibold text-[#147a60] underline-offset-4 hover:underline">
-                Create one securely
+                Create one
               </Link>
             </p>
-            <p className="mt-4 text-xs leading-5 text-[#7c8d88]">
-              Authorized users only. Access and policy changes are logged for security review.
+            <p className="mt-4 flex items-center gap-1.5 text-xs text-[#7a9790]">
+              <svg className="h-3 w-3" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+                <path d="M8 1a4 4 0 0 0-4 4v1H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-1V5a4 4 0 0 0-4-4Zm0 1.5A2.5 2.5 0 0 1 10.5 5v1h-5V5A2.5 2.5 0 0 1 8 2.5ZM8 10a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z" />
+              </svg>
+              Authorized users only · all access is logged
             </p>
           </div>
         </section>

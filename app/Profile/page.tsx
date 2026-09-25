@@ -14,6 +14,15 @@ type Profile = {
   credit_card: string;
 };
 
+const FIELD_META: { label: string; key: keyof Profile; mask: (v: string) => string; mono?: boolean }[] = [
+  { label: "Username",     key: "username",      mask: (v) => v },
+  { label: "Email",        key: "email",         mask: maskEmail, mono: true },
+  { label: "Phone",        key: "tel",           mask: maskPhone, mono: true },
+  { label: "Date of birth",key: "date_of_birth", mask: maskDob  },
+  { label: "Card",         key: "credit_card",   mask: maskCard, mono: true },
+  { label: "Address",      key: "address",       mask: maskAddress },
+];
+
 export default function ProfilePage() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -21,11 +30,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     const id = localStorage.getItem("user_id");
-    if (!id) {
-      router.push("/Login");
-      return;
-    }
-
+    if (!id) { router.push("/Login"); return; }
     void (async () => {
       try {
         const response = await fetch(`${API_URL}/users/${id}`);
@@ -42,45 +47,76 @@ export default function ProfilePage() {
   }, [router]);
 
   return (
-    <div className="flex min-h-screen bg-[#f7faf8] md:flex-row">
+    <div className="flex min-h-screen">
       <Sidebar />
-      <main className="min-w-0 flex-1 px-5 py-7 sm:px-8 lg:px-12 lg:py-10">
-        <div className="mx-auto max-w-5xl">
-          <header className="border-b border-[#dbe7e1] pb-7">
+      <main className="min-w-0 flex-1 bg-white px-5 py-8 sm:px-10 lg:px-16 lg:py-12">
+        <div className="mx-auto max-w-4xl">
+          <header className="border-b border-[#e0ebe5] pb-8">
             <p className="eyebrow">Privacy profile</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-[-0.05em] text-[#102522] sm:text-4xl">Your protected details.</h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-[#667a75]">These values are masked by the data-protection policy before they are displayed.</p>
+            <h1 className="mt-3 text-3xl font-bold tracking-tight text-[#0d1f1c] sm:text-4xl">
+              Protected details.
+            </h1>
+            <p className="mt-3 text-[0.9375rem] text-[#52716a]">
+              All sensitive fields are masked by the active data-protection policy.
+            </p>
           </header>
 
-          {error && <p role="alert" className="mt-6 rounded-2xl border border-[#f1c7c7] bg-[#fff7f7] px-4 py-3 text-sm leading-6 text-[#b93838]">{error}</p>}
+          {error && (
+            <div role="alert" className="mt-6 flex items-start gap-3 rounded-2xl border border-[#fecaca] bg-[#fef2f2] px-4 py-4">
+              <p className="text-sm text-[#c0392b]">{error}</p>
+            </div>
+          )}
+
           {!profile && !error && <LoadingProfile />}
 
           {profile && (
-            <section className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_17rem]">
-              <div className="overflow-hidden rounded-[1.75rem] border border-[#dbe7e1] bg-white">
-                <div className="border-b border-[#edf2ef] px-5 py-5 sm:px-7">
-                  <p className="text-sm font-semibold text-[#102522]">Account identity</p>
-                  <p className="mt-1 text-sm text-[#667a75]">Data shown here cannot be edited from this workspace.</p>
+            <section className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,1fr)_280px]">
+              {/* Field list */}
+              <div className="card overflow-hidden">
+                <div className="border-b border-[#e0ebe5] bg-[#f5f9f7] px-6 py-5">
+                  <p className="text-sm font-semibold text-[#0d1f1c]">Account identity</p>
+                  <p className="mt-0.5 text-xs text-[#7a9790]">Values display as masked by policy. Cannot be edited here.</p>
                 </div>
-                <dl>
-                  <DetailRow label="Username" value={profile.username} />
-                  <DetailRow label="Email" value={maskEmail(profile.email)} mono />
-                  <DetailRow label="Date of birth" value={maskDob(profile.date_of_birth)} />
-                  <DetailRow label="Phone" value={maskPhone(profile.tel)} mono />
-                  <DetailRow label="Address" value={maskAddress(profile.address)} />
-                  <DetailRow label="Card" value={maskCard(profile.credit_card)} mono last />
+                <dl className="divide-y divide-[#f0f6f3]">
+                  {FIELD_META.map(({ label, key, mask, mono }) => (
+                    <div key={key} className="flex flex-col gap-1.5 px-6 py-5 sm:flex-row sm:items-baseline sm:gap-8">
+                      <dt className="w-36 shrink-0 text-xs font-semibold uppercase tracking-wide text-[#7a9790]">
+                        {label}
+                      </dt>
+                      <dd className={`min-w-0 break-all text-sm text-[#0d1f1c] ${mono ? "font-mono" : ""}`}>
+                        {mask(profile[key]) || "—"}
+                      </dd>
+                    </div>
+                  ))}
                 </dl>
               </div>
 
-              <aside className="rounded-[1.75rem] border border-[#c9e7d8] bg-[#eaf7f0] p-6">
-                <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#083a31] text-white"><ShieldIcon /></span>
-                <h2 className="mt-5 text-xl font-semibold tracking-[-0.035em] text-[#102522]">Masked by default</h2>
-                <p className="mt-3 text-sm leading-6 text-[#406058]">Your personal fields are protected by the active masking policy. Access is recorded for audit review.</p>
-                <div className="mt-6 rounded-2xl border border-[#c9e7d8] bg-white/70 p-4 text-sm leading-6 text-[#406058]">
-                  <p className="font-semibold text-[#102522]">Need to update details?</p>
-                  <p className="mt-1">Contact an authorized administrator.</p>
+              {/* Info sidebar */}
+              <div className="space-y-5">
+                <div className="card p-6">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#0d1f1c] text-white">
+                    <ShieldIcon />
+                  </div>
+                  <h2 className="mt-5 text-base font-bold text-[#0d1f1c]">Masked by default</h2>
+                  <p className="mt-2 text-sm leading-6 text-[#52716a]">
+                    Your personal fields are protected by active masking using regular expressions before any data is surfaced.
+                  </p>
                 </div>
-              </aside>
+                <div className="card p-6">
+                  <h3 className="text-sm font-bold text-[#0d1f1c]">Need to update details?</h3>
+                  <p className="mt-1.5 text-sm leading-5 text-[#52716a]">
+                    Contact an authorized administrator directly. Changes are logged for audit review.
+                  </p>
+                  <div className="mt-4 rounded-xl border border-[#e0ebe5] bg-[#f5f9f7] px-4 py-3">
+                    <div className="flex items-center gap-2 text-xs font-medium text-[#52716a]">
+                      <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+                        <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1ZM7 4.75A.75.75 0 0 1 8.5 5v4.5a.75.75 0 0 1-1.5 0V5A.75.75 0 0 1 7 4.75Zm1 7.5a.875.875 0 1 1 0-1.75.875.875 0 0 1 0 1.75Z" />
+                      </svg>
+                      Access logged · Policy enforced
+                    </div>
+                  </div>
+                </div>
+              </div>
             </section>
           )}
         </div>
@@ -92,41 +128,50 @@ export default function ProfilePage() {
 function isProfile(value: unknown): value is Profile {
   if (!value || typeof value !== "object") return false;
   const item = value as Partial<Profile>;
-  return [item.username, item.email, item.tel, item.date_of_birth, item.address, item.credit_card].every((field) => typeof field === "string");
+  return [item.username, item.email, item.tel, item.date_of_birth, item.address, item.credit_card].every(
+    (f) => typeof f === "string"
+  );
 }
 
 function maskEmail(value: string) {
   const [local, domain] = value.split("@");
-  if (!local || !domain) return "••••••••";
+  if (!local || !domain) return "••••••";
   if (local.length <= 2) return `${local[0] ?? "•"}••@${domain}`;
   return `${local[0]}${"•".repeat(Math.max(1, local.length - 2))}${local.at(-1)}@${domain}`;
 }
-
 function maskPhone(value: string) {
-  const digits = value.replace(/\D/g, "");
-  if (digits.length < 4) return "••••";
-  return `XXX-XXX-${digits.slice(-4)}`;
+  const d = value.replace(/\D/g, "");
+  if (d.length < 4) return "••••";
+  return `XXX-XXX-${d.slice(-4)}`;
 }
-
 function maskCard(value: string) {
-  const digits = value.replace(/\D/g, "");
-  if (digits.length < 4) return "••••••••";
-  return `XXXX-XXXX-XXXX-${digits.slice(-4)}`;
+  const d = value.replace(/\D/g, "");
+  if (d.length < 4) return "••••";
+  return `XXXX-XXXX-XXXX-${d.slice(-4)}`;
 }
-
 function maskDob(value: string) {
-  const clean = value.replace(/^DOB:\s*/i, "");
-  return clean.replace(/\d/g, "X").replace(/[/-]/g, "/");
+  return value.replace(/^DOB:\s*/i, "").replace(/\d/g, "X");
 }
-
 function maskAddress(value: string) {
-  const clean = value.replace(/^Address:\s*/i, "");
-  return clean.replace(/^\d+(?:\/\d+)?/, (houseNumber) => houseNumber.replace(/\d/g, "X"));
+  return value.replace(/^Address:\s*/i, "").replace(/^\d+(?:\/\d+)?/, (h) => h.replace(/\d/g, "X"));
 }
 
-function DetailRow({ label, value, mono, last }: { label: string; value: string; mono?: boolean; last?: boolean }) {
-  return <div className={`grid gap-1 px-5 py-4 sm:grid-cols-[10rem_1fr] sm:gap-5 sm:px-7 ${last ? "" : "border-b border-[#edf2ef]"}`}><dt className="text-sm font-semibold text-[#667a75]">{label}</dt><dd className={`min-w-0 break-words text-sm leading-6 text-[#102522] ${mono ? "font-mono" : ""}`}>{value || "—"}</dd></div>;
+function LoadingProfile() {
+  return (
+    <div className="mt-10 card p-10 text-center">
+      <svg className="mx-auto h-8 w-8 animate-spin text-[#147a60]" viewBox="0 0 24 24" fill="none">
+        <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+        <path className="opacity-100" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+      </svg>
+      <p className="mt-4 text-sm font-medium text-[#7a9790]">Loading protected details…</p>
+    </div>
+  );
 }
-
-function LoadingProfile() { return <div className="mt-8 rounded-[1.75rem] border border-[#dbe7e1] bg-white p-10 text-center"><div className="mx-auto h-9 w-9 animate-spin rounded-full border-4 border-[#dff3e9] border-t-[#147a60]" /><p className="mt-4 text-sm font-semibold text-[#667a75]">Loading protected details…</p></div>; }
-function ShieldIcon() { return <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.5 19 6.4v4.7c0 4.4-2.9 8.2-7 9.4-4.1-1.2-7-5-7-9.4V6.4l7-2.9Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /><path d="m8.9 12 2.1 2.1 4.2-4.2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
+function ShieldIcon() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M12 3.5 19 6.4v4.7c0 4.4-2.9 8.2-7 9.4-4.1-1.2-7-5-7-9.4V6.4l7-2.9Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="m8.9 12 2.1 2.1 4.2-4.2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
