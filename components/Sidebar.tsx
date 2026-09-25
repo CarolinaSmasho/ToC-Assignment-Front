@@ -1,19 +1,26 @@
-"use client";
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
+import BrandMark from "@/components/BrandMark";
 
 const NAV_ITEMS = [
-  { label: "My Account", href: "/MainMenu" },
+  { label: "Account", href: "/MainMenu" },
   { label: "Profile", href: "/Profile" },
-  { label: "Transaction", href: "/Transaction" },
+  { label: "Transactions", href: "/Transaction" },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   const handleSignOut = () => {
     localStorage.removeItem("user_id");
@@ -23,133 +30,34 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Mobile Top Navigation Bar */}
-      <header className="md:hidden flex items-center justify-between bg-green-200 px-4 py-3 sticky top-0 z-30 shadow-xs border-b border-green-300">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-green-700 text-white font-medium text-xs shadow-xs">
-            Logo
-          </div>
-          <span className="font-semibold text-gray-900 text-base">ToC Banking</span>
-        </div>
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          aria-label="Toggle navigation menu"
-          className="p-2 rounded-lg text-gray-800 hover:bg-green-300/60 focus:outline-none transition-colors cursor-pointer"
-        >
-          {isOpen ? (
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          ) : (
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          )}
-        </button>
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[#dbe7e1] bg-white/88 px-4 py-3 shadow-sm backdrop-blur md:hidden">
+        <Link href="/MainMenu" className="flex items-center gap-3">
+          <BrandMark size="sm" />
+          <div><p className="text-sm font-semibold text-[#102522]">MaskVault</p><p className="text-xs text-[#667a75]">Data masking</p></div>
+        </Link>
+        <button type="button" onClick={() => setIsOpen((value) => !value)} aria-label="Toggle navigation menu" className="grid h-10 w-10 place-items-center rounded-xl border border-[#dbe7e1] text-[#102522] transition hover:bg-[#f1f7f4] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#147a60]"><MenuIcon open={isOpen} /></button>
       </header>
 
-      {/* Mobile Backdrop Overlay */}
-      {isOpen && (
-        <div
-          className="md:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-xs transition-opacity"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
-
-      {/* Mobile Drawer Menu */}
-      <div
-        className={`md:hidden fixed top-0 right-0 z-50 h-full w-64 bg-green-200 p-6 shadow-xl flex flex-col justify-between transition-transform duration-300 ease-in-out ${
-          isOpen ? "translate-x-0" : "translate-x-full"
-        }`}
-      >
+      {isOpen && <button type="button" aria-label="Close navigation menu" className="fixed inset-0 z-40 bg-[#062d26]/35 backdrop-blur-sm md:hidden" onClick={() => setIsOpen(false)} />}
+      <div className={`fixed right-0 top-0 z-50 flex h-full w-72 flex-col justify-between border-l border-[#dbe7e1] bg-white p-6 shadow-2xl transition-transform duration-300 md:hidden ${isOpen ? "translate-x-0" : "translate-x-full"}`}>
         <div>
-          <div className="flex items-center justify-between pb-6 border-b border-green-300">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-700 text-white text-xs font-medium">
-                Logo
-              </div>
-              <span className="font-semibold text-gray-900">Menu</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsOpen(false)}
-              className="p-1 rounded-md text-gray-700 hover:bg-green-300/50 cursor-pointer"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-
-          <nav className="flex flex-col gap-2 mt-6">
-            {NAV_ITEMS.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setIsOpen(false)}
-                  className={`rounded-full px-5 py-3 text-base transition-colors ${
-                    isActive
-                      ? "bg-white text-green-900 shadow-sm font-medium"
-                      : "text-green-950 hover:bg-white/40"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
+          <div className="flex items-center justify-between border-b border-[#dbe7e1] pb-5"><div className="flex items-center gap-3"><BrandMark size="sm" /><span className="font-semibold text-[#102522]">Menu</span></div><button type="button" onClick={() => setIsOpen(false)} className="grid h-9 w-9 place-items-center rounded-xl text-[#667a75] hover:bg-[#f1f7f4]" aria-label="Close menu"><MenuIcon open /></button></div>
+          <Navigation pathname={pathname} onNavigate={() => setIsOpen(false)} />
         </div>
-
-        <button
-          type="button"
-          className="text-left text-lg font-medium text-red-600 hover:text-red-700 py-3 cursor-pointer"
-          onClick={() => {
-            setIsOpen(false);
-            handleSignOut();
-          }}
-        >
-          Sign Out
-        </button>
+        <SignOutButton onClick={handleSignOut} />
       </div>
 
-      {/* Desktop Sticky Sidebar */}
-      <aside className="hidden md:flex w-64 lg:w-72 shrink-0 flex-col justify-between bg-green-200 px-6 py-10 min-h-screen sticky top-0 self-start">
-        <div>
-          <div className="mx-auto mb-10 flex h-32 w-32 items-center justify-center rounded-full bg-green-700 text-white shadow-inner">
-            <span className="text-sm font-medium">Logo</span>
-          </div>
-
-          <nav className="flex flex-col gap-2">
-            {NAV_ITEMS.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`rounded-full px-5 py-3 text-base transition-colors ${
-                    isActive
-                      ? "bg-white text-green-900 shadow-sm font-medium"
-                      : "text-green-950 hover:bg-white/40"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
-
-        <button
-          type="button"
-          className="text-left text-lg font-medium text-red-600 hover:text-red-700 transition-colors cursor-pointer"
-          onClick={handleSignOut}
-        >
-          Sign Out
-        </button>
+      <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col justify-between border-r border-[#dbe7e1] bg-white px-6 py-8 md:flex">
+        <div><Link href="/MainMenu" className="mb-10 flex items-center gap-3"><BrandMark /><div><p className="text-lg font-semibold tracking-[-0.03em] text-[#102522]">MaskVault</p><p className="text-sm text-[#667a75]">Secure Data Masking</p></div></Link><Navigation pathname={pathname} /></div>
+        <div className="space-y-4"><div className="rounded-2xl border border-[#dbe7e1] bg-[#f7faf8] p-4 text-sm leading-6 text-[#667a75]"><p className="font-semibold text-[#102522]">Production access</p><p className="mt-1">All activity is logged for audit review.</p></div><SignOutButton onClick={handleSignOut} /></div>
       </aside>
     </>
   );
 }
+
+function Navigation({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+  return <nav className="mt-6 flex flex-col gap-2" aria-label="Primary navigation">{NAV_ITEMS.map((item) => { const isActive = pathname === item.href; return <Link key={item.href} href={item.href} onClick={onNavigate} aria-current={isActive ? "page" : undefined} className={`rounded-2xl px-4 py-3 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#147a60] ${isActive ? "bg-[#083a31] text-white shadow-sm" : "text-[#667a75] hover:bg-[#f1f7f4] hover:text-[#102522]"}`}>{item.label}</Link>; })}</nav>;
+}
+
+function SignOutButton({ onClick }: { onClick: () => void }) { return <button type="button" className="w-full rounded-2xl border border-[#f1c7c7] bg-[#fff7f7] px-4 py-3 text-left text-sm font-semibold text-[#b93838] transition hover:bg-[#ffecec] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b93838]" onClick={onClick}>Sign out</button>; }
+function MenuIcon({ open }: { open?: boolean }) { return <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">{open ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18 18 6M6 6l12 12" /> : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h16M4 12h16M4 17h16" />}</svg>; }

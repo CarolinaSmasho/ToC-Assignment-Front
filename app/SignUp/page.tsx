@@ -1,339 +1,252 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import AuthBrandPanel from "@/components/AuthBrandPanel";
-import { API_URL } from "@/lib/api";
+import BrandMark from "@/components/BrandMark";
+import { API_URL, getErrorMessage } from "@/lib/api";
 
-interface FormData {
-username: string;
-email: string;
-password: string;
-dateOfBirth: string;
-phone: string;
-address: string;
-creditCard: string;
-}
-
-const DEFAULT_FORM_DATA: FormData = {
-username: "",
-email: "",
-password: "",
-dateOfBirth: "",
-phone: "",
-address: "",
-creditCard: "",
+type FormData = {
+  username: string;
+  email: string;
+  password: string;
+  dateOfBirth: string;
+  phone: string;
+  address: string;
+  creditCard: string;
 };
 
+type MaskResponse = {
+  original_email?: string;
+  original_date_of_birth?: string;
+  original_phone_number?: string;
+  original_address?: string;
+  original_credit_card?: string;
+  email?: string;
+  date_of_birth?: string;
+  phone_number?: string;
+  address?: string;
+  credit_card?: string;
+};
+
+const EMPTY_FORM: FormData = {
+  username: "",
+  email: "",
+  password: "",
+  dateOfBirth: "",
+  phone: "",
+  address: "",
+  creditCard: "",
+};
+
+const EXAMPLE = `somchai
+1234
+somchai.d@company.com
+093-245-7894
+DOB:25/12/2549
+Address: 689 ซอยลาดกระบัง 19 ถนนลาดกระบัง
+1234-5678-9012-3456`;
+
 export default function SignUpPage() {
-const router = useRouter();
-const [step, setStep] = useState<"input" | "confirmation">(() => {
-	if (typeof window !== "undefined") {
-		const params = new URLSearchParams(window.location.search);
-		if (params.get("step") === "confirmation") return "confirmation";
-	}
-	return "input";
-});
-const [rawInfo, setRawInfo] = useState("");
-const [formData, setFormData] = useState<FormData>(DEFAULT_FORM_DATA);
-const [isCensored, setIsCensored] = useState(true);
-const [error, setError] = useState("");
-const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const [step, setStep] = useState<"input" | "review">("input");
+  const [rawInfo, setRawInfo] = useState("");
+  const [plainForm, setPlainForm] = useState<FormData>(EMPTY_FORM);
+  const [maskedForm, setMaskedForm] = useState<FormData>(EMPTY_FORM);
+  const [showPlain, setShowPlain] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-	const handleProceedToConfirmation = () => {
-		setError("");
-		if (!rawInfo.trim()) {
-			setError("Please enter your info first");
-			return;
-		}
+  const prepareReview = async () => {
+    setError("");
+    const lines = rawInfo.split("\n").map((line) => line.trim()).filter(Boolean);
+    if (lines.length < 3) {
+      setError("Add a username, password, and contact details before continuing.");
+      return;
+    }
 
-		const lines = rawInfo.split("\n").map((l) => l.trim()).filter(Boolean);
+    const username = lines[0] ?? "";
+    const password = lines[1] ?? "";
+    const text = lines.slice(2).join(" ");
+    if (!username || !password || !text) {
+      setError("Add a username, password, and contact details before continuing.");
+      return;
+    }
 
-		const emailMatch = rawInfo.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-		const phoneMatch = rawInfo.match(/(?:0\d{1,2}[-\s]?\d{3}[-\s]?\d{4}|\b\d{3}-\d{3}-\d{4}\b|\b0\d{8,9}\b)/);
-		const cardMatch = rawInfo.match(/(?:\d{4}-){3}\d{4}|\b\d{16}\b/);
-		const dobMatch = rawInfo.match(/(?:DOB:\s*)?(\d{1,2}[/-]\d{1,2}[/-]\d{2,7})/i);
-		const addressPrefixMatch = rawInfo.match(/Address:\s*([^\n\r]+)/i);
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/mask/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      const data: unknown = await response.json();
+      if (!response.ok || !data || typeof data !== "object") {
+        setError(getErrorMessage(data, "We could not process those details. Check the format and try again."));
+        return;
+      }
 
-		let username = "";
-		let password = "";
+      const masked = data as MaskResponse;
+      if (!masked.original_email) {
+        setError("We could not find an email address in those details. Check the format and try again.");
+        return;
+      }
 
-		// If multiline structured input (line 0 = username, line 1 = password)
-		if (lines.length >= 2 && !lines[0].includes("@") && !/^Address:/i.test(lines[0]) && !/^DOB:/i.test(lines[0])) {
-			username = lines[0];
-			password = lines[1];
-		} else if (emailMatch) {
-			// If single-line bank log, derive username from email prefix and assign default password
-			username = emailMatch[0].split("@")[0].replace(/[^a-zA-Z0-9_]/g, "_");
-			password = "password123";
-		} else {
-			username = lines[0] || "user";
-			password = "password123";
-		}
+      setPlainForm({
+        username,
+        password,
+        email: masked.original_email ?? "",
+        phone: masked.original_phone_number ?? "",
+        dateOfBirth: masked.original_date_of_birth ?? "",
+        address: masked.original_address ?? "",
+        creditCard: masked.original_credit_card ?? "",
+      });
+      setMaskedForm({
+        username,
+        password: "••••••••",
+        email: masked.email ?? "",
+        phone: masked.phone_number ?? "",
+        dateOfBirth: masked.date_of_birth ?? "",
+        address: masked.address ?? "",
+        creditCard: masked.credit_card ?? "",
+      });
+      setStep("review");
+    } catch {
+      setError("The masking service is unavailable. Check your connection and try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-		let extractedAddress = "";
-		if (addressPrefixMatch) {
-			extractedAddress = `Address: ${addressPrefixMatch[1].trim()}`;
-		} else {
-			extractedAddress =
-				lines.find(
-					(l) =>
-						l !== lines[0] &&
-						l !== lines[1] &&
-						!l.includes(emailMatch?.[0] || "___") &&
-						!l.includes(phoneMatch?.[0] || "___") &&
-						!l.includes(cardMatch?.[0] || "___") &&
-						!(dobMatch && l.includes(dobMatch[0]))
-				) || "";
-		}
+  const register = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: plainForm.username,
+          password: plainForm.password,
+          email: plainForm.email,
+          tel: plainForm.phone,
+          date_of_birth: plainForm.dateOfBirth,
+          address: plainForm.address,
+          credit_card: plainForm.creditCard,
+        }),
+      });
+      const data: unknown = await response.json();
+      if (!response.ok) {
+        setError(getErrorMessage(data, "We could not create your account. Try again."));
+        return;
+      }
+      router.push("/Login");
+    } catch {
+      setError("The secure service is unavailable. Check your connection and try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-		const parsed: FormData = {
-			username,
-			password,
-			email: emailMatch?.[0] || "",
-			phone: phoneMatch?.[0] || "",
-			dateOfBirth: dobMatch ? (dobMatch[0].toUpperCase().startsWith("DOB:") ? dobMatch[0] : `DOB:${dobMatch[1]}`) : "",
-			address: extractedAddress,
-			creditCard: cardMatch?.[0] || "",
-		};
+  const displayed = showPlain ? plainForm : maskedForm;
+  const safeDisplayed = { ...displayed, password: "••••••••" };
 
-		if (!parsed.username || !parsed.email) {
-			setError("Couldn't find username or email in your info. Check the format.");
-			return;
-		}
+  return (
+    <div className="flex min-h-screen bg-[#f7faf8] lg:flex-row">
+      <AuthBrandPanel />
+      <main className="soft-grid relative flex min-w-0 flex-1 items-center justify-center px-5 py-8 sm:px-8 lg:px-12">
+        <section className="enter-up relative w-full max-w-[32rem]">
+          <div className="mb-9 flex items-center justify-between lg:hidden">
+            <Link href="/Login" className="flex items-center gap-3"><BrandMark size="sm" /><span className="font-semibold text-[#102522]">MaskVault</span></Link>
+            <span className="rounded-full bg-[#dff3e9] px-3 py-1.5 text-xs font-semibold text-[#083a31]">Protected</span>
+          </div>
 
-		setFormData(parsed);
-		setStep("confirmation");
-	};
+          {step === "input" ? (
+            <>
+              <p className="eyebrow">Create an account</p>
+              <h1 className="mt-3 text-4xl font-semibold tracking-[-0.055em] text-[#102522] sm:text-5xl">Review before we protect it.</h1>
+              <p className="mt-4 max-w-lg text-base leading-7 text-[#667a75]">
+                Paste your registration details. We will mask sensitive values before the final review.
+              </p>
 
-	const handleSignUp = async () => {
-		setError("");
-		setLoading(true);
-		try {
-			const res = await fetch(`${API_URL}/auth/register`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					username: formData.username,
-					password: formData.password,
-					email: formData.email,
-					tel: formData.phone,
-					date_of_birth: formData.dateOfBirth,
-					address: formData.address,
-					credit_card: formData.creditCard,
-				}),
-			});
-			const data = await res.json();
+              <label className="mt-8 block">
+                <span className="mb-2 block text-sm font-semibold text-[#102522]">Registration details</span>
+                <div className="field-shell p-1.5">
+                  <textarea
+                    id="user-info-input"
+                    value={rawInfo}
+                    onChange={(event) => setRawInfo(event.target.value)}
+                    placeholder={EXAMPLE}
+                    className="h-62 w-full resize-none rounded-xl bg-transparent px-3 py-3 font-mono text-sm leading-6 text-[#102522] outline-none placeholder:text-[#8a9b96]"
+                  />
+                </div>
+              </label>
+              <button type="button" onClick={() => setRawInfo(EXAMPLE)} className="mt-3 text-sm font-semibold text-[#147a60] underline-offset-4 hover:underline">
+                Use sample format
+              </button>
+              <p className="mt-2 text-xs leading-5 text-[#7c8d88]">Line 1: username · Line 2: password · Remaining lines: personal details</p>
 
-			if (!res.ok) {
-				setError(data.detail || "Sign up failed");
-				return;
-			}
+              {error && <Message text={error} />}
+              <button type="button" onClick={prepareReview} disabled={loading} className="mt-7 flex h-13 w-full items-center justify-center rounded-2xl bg-[#083a31] px-5 text-base font-semibold text-white transition hover:bg-[#0d5546] disabled:cursor-not-allowed disabled:opacity-60">
+                {loading ? "Protecting details…" : "Continue to protected review"}
+              </button>
+              <p className="mt-6 text-sm text-[#667a75]">Already have an account? <Link href="/Login" className="font-semibold text-[#147a60] underline-offset-4 hover:underline">Sign in</Link></p>
+            </>
+          ) : (
+            <>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="eyebrow">Protected review</p>
+                  <h1 className="mt-3 text-4xl font-semibold tracking-[-0.055em] text-[#102522]">Confirm your details.</h1>
+                </div>
+                <span className={`mt-1 shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${showPlain ? "bg-amber-100 text-amber-800" : "bg-[#dff3e9] text-[#083a31]"}`}>
+                  {showPlain ? "Plain view" : "Masked view"}
+                </span>
+              </div>
+              <p className="mt-4 text-base leading-7 text-[#667a75]">Sensitive values are masked by default before this account is created.</p>
 
-			router.push("/Login");
-		} catch {
-			setError("Could not reach server. Is the backend running?");
-		} finally {
-			setLoading(false);
-		}
-	};
+              <div className="mt-6 flex items-center justify-between rounded-2xl border border-[#dbe7e1] bg-white px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#dff3e9] text-[#083a31]"><ShieldIcon /></span>
+                  <div><p className="text-sm font-semibold text-[#102522]">Privacy preview</p><p className="text-xs text-[#667a75]">Review sensitive values safely</p></div>
+                </div>
+                <button type="button" onClick={() => setShowPlain((value) => !value)} className="rounded-xl px-3 py-2 text-sm font-semibold text-[#147a60] hover:bg-[#f1f7f4]">
+                  {showPlain ? "Mask values" : "Show values"}
+                </button>
+              </div>
 
-	// Regex Masking functions following assignment specification & QA test cases
-	const getCensoredEmail = (email: string) => {
-		if (!isCensored || !email) return email;
-		// Mask username characters between first and last with '*'
-		return email.replace(/^([\w.-])(.*)([\w.-])(?=@)/, (_, first, middle, last) => {
-			return `${first}${"*".repeat(middle.length)}${last}`;
-		});
-	};
+              <dl className="mt-5 overflow-hidden rounded-2xl border border-[#dbe7e1] bg-white">
+                <ReviewRow label="Username" value={displayed.username} />
+                <ReviewRow label="Email" value={displayed.email} mono />
+                <ReviewRow label="Password" value={safeDisplayed.password} />
+                <ReviewRow label="Date of birth" value={displayed.dateOfBirth} />
+                <ReviewRow label="Phone" value={displayed.phone} mono />
+                <ReviewRow label="Address" value={displayed.address} />
+                <ReviewRow label="Card" value={displayed.creditCard} mono last />
+              </dl>
 
-	const getCensoredPhone = (phone: string) => {
-		if (!isCensored || !phone) return phone;
-		const trimmed = phone.trim();
-		if (/^\d{3}-\d{3}-\d{4}$/.test(trimmed)) {
-			return trimmed.replace(/^(\d{3})-(\d{3})-(\d{4})$/, "XXX-XXX-$3");
-		}
-		if (/^\d{10}$/.test(trimmed)) {
-			return trimmed.replace(/^(\d{6})(\d{4})$/, "XXX-XXX-$2");
-		}
-		return trimmed.replace(/(\d{3})-(\d{3})-(\d{4})/, "XXX-XXX-$3");
-	};
-
-	const getCensoredCreditCard = (card: string) => {
-		if (!isCensored || !card) return card;
-		const trimmed = card.trim();
-		if (/^\d{4}-\d{4}-\d{4}-\d{4}$/.test(trimmed)) {
-			return trimmed.replace(/^(\d{4})-(\d{4})-(\d{4})-(\d{4})$/, "XXXX-XXXX-XXXX-$4");
-		}
-		if (/^\d{16}$/.test(trimmed)) {
-			return trimmed.replace(/^(\d{12})(\d{4})$/, "XXXXXXXXXXXX$2");
-		}
-		return trimmed.replace(/(?:\d{4}-){3}(\d{4})/, "XXXX-XXXX-XXXX-$1");
-	};
-
-	const getCensoredDOB = (dob: string) => {
-		if (!isCensored || !dob) return dob;
-		const hasPrefix = /^DOB:/i.test(dob);
-		const clean = dob.replace(/^DOB:\s*/i, "");
-		const masked = clean.replace(/(\d{1,2})[/-](\d{1,2})[/-](\d{2})(\d+)/, (_, d, m, yPrefix, ySuffix) => {
-			return `XX/XX/${yPrefix}${"X".repeat(ySuffix.length)}`;
-		});
-		return hasPrefix ? `DOB:${masked}` : masked;
-	};
-
-	const getCensoredAddress = (addr: string) => {
-		if (!isCensored || !addr) return addr;
-		const hasPrefix = /^Address:\s*/i.test(addr);
-		const clean = addr.replace(/^Address:\s*/i, "");
-		// Only mask the first house number pattern (\d+(?:/\d+)?), replacing each digit with 'X'
-		const masked = clean.replace(/\d+(?:\/\d+)?/, (houseNumber) => {
-			return houseNumber.replace(/\d/g, "X");
-		});
-		return hasPrefix ? `Address: ${masked}` : masked;
-	};
-
-return (
-	<div className="flex min-h-screen flex-col lg:flex-row bg-[#F0FDFD]">
-	<AuthBrandPanel />
-
-	<main className="flex flex-1 items-center justify-center px-6 py-12 lg:py-0">
-		<div className="w-full max-w-sm">
-		{step === "input" && (
-			<div>
-			<div className="text-center">
-				<h1 className="text-4xl sm:text-5xl font-normal text-black tracking-tight">
-				Welcome
-				</h1>
-				<p className="mt-2 text-base sm:text-lg text-gray-500 font-normal">
-				Create account
-				</p>
-			</div>
-
-			<div className="mt-8">
-				<div className="h-64 sm:h-72 w-full rounded-2xl border-2 border-gray-400 bg-white p-4 transition focus-within:border-[#5cb874]">
-				<textarea
-					id="user-info-input"
-					value={rawInfo}
-					onChange={(e) => setRawInfo(e.target.value)}
-					placeholder={"Enter your info or paste a bank log...\ne.g.\nsomchai\n1234\nsomchai.d@company.com\n093-245-7894\nDOB:25/12/2549\nAddress: 689 ซอยลาดกระบัง 19 ถนนลาดกระบัง แขวงลาดกระบัง เขตลาดกระบัง กรุงเทพฯ\n1234-5678-9012-3456"}
-					className="h-full w-full resize-none bg-transparent text-base text-gray-800 placeholder:text-gray-400 focus:outline-none"
-				/>
-				</div>
-			</div>
-
-			{error && (
-				<p className="mt-3 text-center text-sm text-red-500">{error}</p>
-			)}
-
-			<div className="mt-6">
-				<button
-				type="button"
-				onClick={handleProceedToConfirmation}
-				className="w-full rounded-xl bg-[#5cb874] hover:bg-[#4ea865] py-3 text-lg font-medium text-white shadow-sm transition cursor-pointer"
-				>
-				Sign Up
-				</button>
-			</div>
-
-			<p className="mt-4 text-center text-sm text-gray-500">
-				Already have account?{" "}
-				<Link
-				href="/Login"
-				className="text-[#5cb874] hover:underline font-medium"
-				>
-				Log In
-				</Link>
-			</p>
-			</div>
-		)}
-
-		{step === "confirmation" && (
-			<div>
-			<div className="text-center">
-				<h1 className="text-4xl sm:text-5xl font-normal text-black tracking-tight">
-				Welcome
-				</h1>
-				<p className="mt-2 text-base sm:text-lg text-gray-500 font-normal">
-				Create Account
-				</p>
-			</div>
-
-			<div className="mt-4 flex items-center justify-between px-1">
-				<span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500">
-				<span
-					className={`inline-block h-2 w-2 rounded-full ${
-					isCensored ? "bg-amber-500" : "bg-emerald-500"
-					}`}
-				/>
-				{isCensored ? "Personal Data Censored" : "Raw Data Visible"}
-				</span>
-				<button
-				type="button"
-				onClick={() => setIsCensored(!isCensored)}
-				className="text-xs font-medium text-[#5cb874] hover:underline cursor-pointer"
-				>
-				{isCensored ? "👁️ Show Plain" : "🔒 Censor Data"}
-				</button>
-			</div>
-
-			<div className="mt-4 space-y-4">
-				<div className="border-b border-gray-400 pb-1">
-				<input type="text" readOnly value={formData.username} aria-label="Username"
-					className="w-full bg-transparent text-sm sm:text-base text-gray-700 outline-none select-none cursor-default" />
-				</div>
-				<div className="border-b border-gray-400 pb-1">
-				<input type="text" readOnly value={getCensoredEmail(formData.email)} aria-label="Email"
-					className="w-full bg-transparent text-sm sm:text-base text-gray-700 outline-none select-none cursor-default font-mono sm:font-sans" />
-				</div>
-				<div className="border-b border-gray-400 pb-1">
-				<input type="text" readOnly value={isCensored ? "••••••••" : formData.password} aria-label="Password"
-					className="w-full bg-transparent text-sm sm:text-base text-gray-700 outline-none select-none cursor-default" />
-				</div>
-				<div className="border-b border-gray-400 pb-1">
-				<input type="text" readOnly value={getCensoredDOB(formData.dateOfBirth)} aria-label="Date of Birth"
-					className="w-full bg-transparent text-sm sm:text-base text-gray-700 outline-none select-none cursor-default font-mono sm:font-sans" />
-				</div>
-				<div className="border-b border-gray-400 pb-1">
-				<input type="text" readOnly value={getCensoredPhone(formData.phone)} aria-label="Phone"
-					className="w-full bg-transparent text-sm sm:text-base text-gray-700 outline-none select-none cursor-default font-mono sm:font-sans" />
-				</div>
-				<div className="border-b border-gray-400 pb-1">
-				<input type="text" readOnly value={getCensoredAddress(formData.address)} aria-label="Address"
-					className="w-full bg-transparent text-sm sm:text-base text-gray-700 outline-none select-none cursor-default font-mono sm:font-sans" />
-				</div>
-				<div className="border-b border-gray-400 pb-1">
-				<input type="text" readOnly value={getCensoredCreditCard(formData.creditCard)} aria-label="Credit Card"
-					className="w-full bg-transparent text-sm sm:text-base text-gray-700 outline-none select-none cursor-default font-mono sm:font-sans" />
-				</div>
-			</div>
-
-			{error && (
-				<p className="mt-4 text-center text-sm text-red-500">{error}</p>
-			)}
-
-			<div className="mt-8 space-y-3">
-				<button
-				type="button"
-				onClick={handleSignUp}
-				disabled={loading}
-				className="w-full rounded-xl bg-[#5cb874] hover:bg-[#4ea865] py-3 text-lg font-medium text-white shadow-sm transition cursor-pointer disabled:opacity-60"
-				>
-				{loading ? "Signing up..." : "Sign Up"}
-				</button>
-
-				<button
-				type="button"
-				onClick={() => setStep("input")}
-				className="w-full rounded-xl bg-[#c4c4c4] hover:bg-[#b5b5b5] py-3 text-lg font-medium text-white shadow-sm transition cursor-pointer"
-				>
-				Cancel
-				</button>
-			</div>
-			</div>
-		)}
-		</div>
-	</main>
-	</div>
-);
+              {error && <Message text={error} />}
+              <button type="button" onClick={register} disabled={loading} className="mt-7 flex h-13 w-full items-center justify-center rounded-2xl bg-[#083a31] px-5 text-base font-semibold text-white transition hover:bg-[#0d5546] disabled:cursor-not-allowed disabled:opacity-60">
+                {loading ? "Creating account…" : "Create secure account"}
+              </button>
+              <button type="button" onClick={() => { setStep("input"); setShowPlain(false); setError(""); }} className="mt-3 h-12 w-full rounded-2xl border border-[#dbe7e1] bg-white text-sm font-semibold text-[#102522] transition hover:bg-[#f1f7f4]">
+                Edit details
+              </button>
+            </>
+          )}
+        </section>
+      </main>
+    </div>
+  );
 }
+
+function ReviewRow({ label, value, mono, last }: { label: string; value: string; mono?: boolean; last?: boolean }) {
+  return <div className={`grid gap-1 px-4 py-3 sm:grid-cols-[8.5rem_1fr] sm:gap-4 ${last ? "" : "border-b border-[#edf2ef]"}`}><dt className="text-xs font-semibold text-[#667a75]">{label}</dt><dd className={`min-w-0 break-words text-sm text-[#102522] ${mono ? "font-mono" : ""}`}>{value || "—"}</dd></div>;
+}
+
+function Message({ text }: { text: string }) {
+  return <p role="alert" className="mt-5 rounded-xl border border-[#f1c7c7] bg-[#fff7f7] px-4 py-3 text-sm leading-6 text-[#b93838]">{text}</p>;
+}
+
+function ShieldIcon() { return <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.5 19 6.4v4.7c0 4.4-2.9 8.2-7 9.4-4.1-1.2-7-5-7-9.4V6.4l7-2.9Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /><path d="m8.9 12 2.1 2.1 4.2-4.2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
