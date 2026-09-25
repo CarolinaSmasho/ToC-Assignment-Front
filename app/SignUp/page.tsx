@@ -7,113 +7,62 @@ import AuthBrandPanel from "@/components/AuthBrandPanel";
 import BrandMark from "@/components/BrandMark";
 import { API_URL, getErrorMessage } from "@/lib/api";
 
-type FormData = {
-  username: string;
-  email: string;
-  password: string;
-  dateOfBirth: string;
-  phone: string;
-  address: string;
-  creditCard: string;
-};
-
-type MaskResponse = {
-  original_email?: string;
-  original_date_of_birth?: string;
-  original_phone_number?: string;
-  original_address?: string;
-  original_credit_card?: string;
-  email?: string;
-  date_of_birth?: string;
-  phone_number?: string;
-  address?: string;
-  credit_card?: string;
-};
-
-const EMPTY_FORM: FormData = {
-  username: "", email: "", password: "", dateOfBirth: "", phone: "", address: "", creditCard: "",
-};
-const EXAMPLE = `somchai
-1234
-somchai.d@company.com
-093-245-7894
-DOB:25/12/2549
-Address: 689 ซอยลาดกระบัง 19 ถนนลาดกระบัง
-1234-5678-9012-3456`;
-
 export default function SignUpPage() {
   const router = useRouter();
   const [step, setStep] = useState<"input" | "review">("input");
-  const [rawInfo, setRawInfo] = useState("");
-  const [plainForm, setPlainForm] = useState<FormData>(EMPTY_FORM);
-  const [maskedForm, setMaskedForm] = useState<FormData>(EMPTY_FORM);
+
+  const [formData, setFormData] = useState({
+    username: "",
+    password: "",
+    email: "",
+    phone: "",
+    dateOfBirth: "",
+    address: "",
+    creditCard: ""
+  });
+
   const [showPlain, setShowPlain] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const prepareReview = async () => {
-    setError("");
-    const lines = rawInfo.split("\n").map(l => l.trim()).filter(Boolean);
-    if (lines.length < 3) { setError("Add a username, password, and contact details."); return; }
-    const username = lines[0] ?? "";
-    const password = lines[1] ?? "";
-    const text = lines.slice(2).join(" ");
-    if (!username || !password || !text) { setError("Incomplete details. Check the format."); return; }
+  const handleInputChange = (field: keyof typeof formData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
 
-    setLoading(true);
-    try {
-      const response = await fetch(`${API_URL}/mask/`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }),
-      });
-      const data: unknown = await response.json();
-      if (!response.ok || !data || typeof data !== "object") {
-        setError(getErrorMessage(data, "Could not process details.")); return;
-      }
-      const masked = data as MaskResponse;
-      if (!masked.original_email) {
-        setError("Could not extract an email address. Check the format."); return;
-      }
-      setPlainForm({
-        username, password,
-        email: masked.original_email ?? "",
-        phone: masked.original_phone_number ?? "",
-        dateOfBirth: masked.original_date_of_birth ?? "",
-        address: masked.original_address ?? "",
-        creditCard: masked.original_credit_card ?? "",
-      });
-      setMaskedForm({
-        username, password: "••••••••",
-        email: masked.email ?? "",
-        phone: masked.phone_number ?? "",
-        dateOfBirth: masked.date_of_birth ?? "",
-        address: masked.address ?? "",
-        creditCard: masked.credit_card ?? "",
-      });
-      setStep("review");
-    } catch {
-      setError("The masking service is unavailable. Connect and try again.");
-    } finally {
-      setLoading(false);
+  const prepareReview = () => {
+    setError("");
+    const { username, password, email, phone, dateOfBirth, address, creditCard } = formData;
+
+    if (!username.trim() || !password || !email.trim() || !phone.trim() || !dateOfBirth.trim() || !address.trim() || !creditCard.trim()) {
+      setError("Please fill in all fields before continuing.");
+      return;
     }
+
+    setStep("review");
   };
 
   const register = async () => {
-    setError(""); setLoading(true);
+    setError("");
+    setLoading(true);
     try {
       const response = await fetch(`${API_URL}/auth/register`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          username: plainForm.username,
-          password: plainForm.password,
-          email: plainForm.email,
-          tel: plainForm.phone,
-          date_of_birth: plainForm.dateOfBirth,
-          address: plainForm.address,
-          credit_card: plainForm.creditCard,
+          username: formData.username.trim(),
+          password: formData.password,
+          email: formData.email.trim(),
+          tel: formData.phone.trim(),
+          date_of_birth: formData.dateOfBirth.trim(),
+          address: formData.address.trim(),
+          credit_card: formData.creditCard.trim(),
         }),
       });
       const data: unknown = await response.json();
-      if (!response.ok) { setError(getErrorMessage(data, "Account creation failed.")); return; }
+      if (!response.ok) {
+        setError(getErrorMessage(data, "Account creation failed."));
+        return;
+      }
       router.push("/Login");
     } catch {
       setError("Service offline. Try again.");
@@ -122,14 +71,24 @@ export default function SignUpPage() {
     }
   };
 
-  const displayed = showPlain ? plainForm : maskedForm;
-  const safeDisplayed = { ...displayed, password: "••••••••" };
+  const maskedData = {
+    username: formData.username,
+    password: "••••••••",
+    email: maskEmail(formData.email),
+    phone: maskPhone(formData.phone),
+    dateOfBirth: maskDob(formData.dateOfBirth),
+    address: maskAddress(formData.address),
+    creditCard: maskCard(formData.creditCard),
+  };
+
+  const displayed = showPlain ? formData : maskedData;
+  const safeDisplayed = showPlain ? { ...formData, password: "••••••••" } : maskedData;
 
   return (
     <div className="flex min-h-screen">
       <AuthBrandPanel />
-      <main className="soft-grid flex flex-1 flex-col items-center justify-center px-6 py-10 lg:px-14">
-        <section className="enter-up w-full max-w-[32rem]">
+      <main className="soft-grid flex flex-1 flex-col items-center justify-center px-6 py-10 lg:px-14 min-h-screen overflow-y-auto">
+        <section className="enter-up w-full max-w-[34rem] py-8 mt-auto mb-auto">
           <div className="mb-10 flex items-center justify-between lg:hidden">
             <Link href="/Login" className="flex items-center gap-2.5">
               <BrandMark size="sm" />
@@ -142,36 +101,44 @@ export default function SignUpPage() {
             <>
               <p className="eyebrow">Create account</p>
               <h1 className="mt-3 text-[2.6rem] font-bold tracking-[-0.06em] leading-[1.1] text-[#0d1f1c]">
-                Review before<br />we protect.
+                Register your <br/>secure identity.
               </h1>
               <p className="mt-4 text-[0.9375rem] leading-7 text-[#52716a]">
-                Paste your registration details. We analyze and mask sensitive patterns before finalizing the account.
+                Fill in your details below. Sensitive data will be masked by our active policies before final review.
               </p>
 
-              <div className="mt-8">
-                <label htmlFor="user-info-input" className="mb-2 flex items-baseline justify-between text-sm font-semibold text-[#0d1f1c]">
-                  <span>Registration payload</span>
-                  <button type="button" onClick={() => setRawInfo(EXAMPLE)} className="text-xs text-[#147a60] hover:underline">
-                    Load sample
-                  </button>
-                </label>
-                <div className="field-shell p-1.5 shadow-sm">
-                  <textarea
-                    id="user-info-input"
-                    value={rawInfo}
-                    onChange={(e) => setRawInfo(e.target.value)}
-                    placeholder={EXAMPLE}
-                    className="h-[15rem] w-full resize-none rounded-xl bg-transparent px-3.5 py-3 font-mono text-[0.875rem] leading-relaxed text-[#0d1f1c] outline-none placeholder:text-[#a0b5af]"
-                  />
+              <div className="mt-8 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <InputField label="Username" value={formData.username} onChange={(v) => handleInputChange("username", v)} placeholder="john_doe" />
+                  <InputField label="Password" type="password" value={formData.password} onChange={(v) => handleInputChange("password", v)} placeholder="••••••••" />
                 </div>
-                <p className="mt-2 text-[0.8125rem] text-[#7a9790]">
-                  Line 1: Username · Line 2: Password · Remaining: Details
-                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <InputField label="Email Address" type="email" value={formData.email} onChange={(v) => handleInputChange("email", v)} placeholder="john@example.com" />
+                  <InputField label="Phone Number" value={formData.phone} onChange={(v) => handleInputChange("phone", v)} placeholder="081-234-5678" />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <InputField label="Date of Birth" value={formData.dateOfBirth} onChange={(v) => handleInputChange("dateOfBirth", v)} placeholder="DD/MM/YYYY" />
+                  <InputField label="Credit Card" value={formData.creditCard} onChange={(v) => handleInputChange("creditCard", v)} placeholder="1234-5678-9012-3456" />
+                </div>
+
+                <div className="col-span-2">
+                  <label className="mb-2 block text-sm font-semibold text-[#0d1f1c]">Address</label>
+                  <div className="field-shell p-1 shadow-sm h-[6rem]">
+                    <textarea
+                      value={formData.address}
+                      onChange={(e) => handleInputChange("address", e.target.value)}
+                      placeholder="123 Example Street, City, Country"
+                      className="h-full w-full resize-none rounded-xl bg-transparent px-3 py-2 text-[0.9375rem] text-[#0d1f1c] outline-none placeholder:text-[#a0b5af]"
+                    />
+                  </div>
+                </div>
               </div>
 
               {error && <Message text={error} />}
-              <button type="button" onClick={prepareReview} disabled={loading} className="btn-primary w-full mt-7">
-                {loading ? "Protecting details…" : "Continue to review"}
+              <button type="button" onClick={prepareReview} className="btn-primary w-full mt-8">
+                Continue to protected review
               </button>
               <div className="mt-8 text-center text-[0.9375rem] text-[#52716a]">
                 Already have an account? <Link href="/Login" className="font-semibold text-[#147a60] hover:underline">Sign in</Link>
@@ -238,6 +205,23 @@ export default function SignUpPage() {
   );
 }
 
+function InputField({ label, value, onChange, placeholder, type = "text" }: { label: string, value: string, onChange: (v: string) => void, placeholder?: string, type?: string }) {
+  return (
+    <div>
+      <label className="mb-2 block text-sm font-semibold text-[#0d1f1c]">{label}</label>
+      <div className="field-shell">
+        <input
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="h-[3.25rem] w-full bg-transparent px-4 text-[0.9375rem] text-[#0d1f1c] outline-none placeholder:text-[#a0b5af]"
+        />
+      </div>
+    </div>
+  );
+}
+
 function ReviewRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="grid gap-1 px-6 py-4 sm:grid-cols-[8.5rem_1fr] sm:gap-4">
@@ -262,4 +246,28 @@ function ShieldIcon() {
       <path d="m8.9 12 2.1 2.1 4.2-4.2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
+}
+
+// Frontend Masking Helpers
+function maskEmail(value: string) {
+  const [local, domain] = value.split("@");
+  if (!local || !domain) return "••••••";
+  if (local.length <= 2) return `${local[0] ?? "•"}••@${domain}`;
+  return `${local[0]}${"•".repeat(Math.max(1, local.length - 2))}${local.at(-1)}@${domain}`;
+}
+function maskPhone(value: string) {
+  const d = value.replace(/\D/g, "");
+  if (d.length < 4) return "••••";
+  return `XXX-XXX-${d.slice(-4)}`;
+}
+function maskCard(value: string) {
+  const d = value.replace(/\D/g, "");
+  if (d.length < 4) return "••••";
+  return `XXXX-XXXX-XXXX-${d.slice(-4)}`;
+}
+function maskDob(value: string) {
+  return value.replace(/\d/g, "X");
+}
+function maskAddress(value: string) {
+  return value.replace(/^\d+(?:\/\d+)?/, (h) => h.replace(/\d/g, "X"));
 }
